@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/Modal";
-import { Button } from "@/components/ui/button";
+import Button from "@/refresh-components/buttons/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FiKey, FiEye, FiEyeOff, FiAlertCircle } from "react-icons/fi";
@@ -251,12 +251,7 @@ export function MCPApiKeyModal({
           )}
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
+            <Button secondary onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button

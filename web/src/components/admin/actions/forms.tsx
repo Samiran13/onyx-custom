@@ -1,8 +1,9 @@
-import { FiInfo, FiPlus, FiX, FiKey } from "react-icons/fi";
+import { FiInfo, FiX, FiKey } from "react-icons/fi";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import Button from "@/refresh-components/buttons/Button";
 import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
+import SvgPlus from "@/icons/plus";
 
 interface PerUserAuthTemplateConfigProps {
   values: any;
@@ -128,15 +129,8 @@ export function PerUserAuthTemplateConfig({
         <div>
           <div className="flex items-center justify-between mb-2">
             <Label>Authentication Headers</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addHeader}
-              className="flex items-center space-x-1"
-            >
-              <FiPlus className="h-3 w-3" />
-              <span>Add Header</span>
+            <Button secondary onClick={addHeader} leftIcon={SvgPlus}>
+              Add Header
             </Button>
           </div>
 
@@ -156,9 +150,7 @@ export function PerUserAuthTemplateConfig({
                   className="flex-1"
                 />
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+                  tertiary
                   onClick={() => removeHeader(name)}
                   className="text-red-600 hover:text-red-800"
                 >

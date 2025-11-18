@@ -11,17 +11,15 @@ import { ErrorCallout } from "@/components/ErrorCallout";
 import OnyxLogo from "@/icons/onyx-logo";
 import { usePopup } from "@/components/admin/connectors/Popup";
 import { useAgentsContext } from "@/refresh-components/contexts/AgentsContext";
-import { Switch } from "@/components/ui/switch";
+import Switch from "@/refresh-components/inputs/Switch";
 import { Separator } from "@/components/ui/separator";
 import { SubLabel } from "@/components/Field";
 import Button from "@/refresh-components/buttons/Button";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import SimpleTooltip from "@/refresh-components/SimpleTooltip";
+import { useSettingsContext } from "@/components/settings/SettingsProvider";
+import Link from "next/link";
+import { Callout } from "@/components/ui/callout";
 
 interface DefaultAssistantConfiguration {
   tool_ids: number[];
@@ -47,6 +45,7 @@ function DefaultAssistantConfig() {
   const router = useRouter();
   const { popup, setPopup } = usePopup();
   const { refreshAgents } = useAgentsContext();
+  const combinedSettings = useSettingsContext();
   const [savingTools, setSavingTools] = useState<Set<number>>(new Set());
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<number>>(new Set());
@@ -167,80 +166,104 @@ function DefaultAssistantConfig() {
     );
   }
 
+  // Show message if default assistant is disabled
+  if (combinedSettings?.settings?.disable_default_assistant) {
+    return (
+      <div>
+        {popup}
+        <Callout type="notice">
+          <p className="mb-3">
+            The default assistant is currently disabled in your workspace
+            settings.
+          </p>
+          <p>
+            To configure the default assistant, you must first enable it in{" "}
+            <Link href="/admin/settings" className="text-link font-medium">
+              Workspace Settings
+            </Link>
+            .
+          </p>
+        </Callout>
+      </div>
+    );
+  }
+
   return (
     <div>
       {popup}
-      <div className="max-w-4xl w-full">
-        <div className="space-y-6">
-          <div className="mt-4">
-            <Text className="text-text-dark">
-              Configure which capabilities are enabled for the default assistant
-              in chat. These settings apply to all users who haven&apos;t
-              customized their assistant preferences.
+      <div className="space-y-6">
+        <div className="mt-4">
+          <Text className="text-text-dark">
+            Configure which capabilities are enabled for the default assistant
+            in chat. These settings apply to all users who haven&apos;t
+            customized their assistant preferences.
+          </Text>
+        </div>
+
+        <Separator />
+
+        <div className="max-w-4xl">
+          <div className="flex gap-x-2 items-center">
+            <Text mainUiBody text04 className="font-medium text-sm">
+              Instructions
             </Text>
           </div>
-
-          <Separator />
-
-          <div className="max-w-4xl">
-            <div className="flex gap-x-2 items-center">
-              <div className="block font-medium text-sm">Instructions</div>
-            </div>
-            <SubLabel>
-              Add instructions to tailor the behavior of the assistant.
-            </SubLabel>
-            <div>
-              <textarea
-                className={cn(
-                  "w-full",
-                  "p-3",
-                  "border",
-                  "border-border",
-                  "rounded-lg",
-                  "text-sm",
-                  "[&::placeholder]:text-text-muted/50"
-                )}
-                rows={8}
-                value={systemPrompt}
-                onChange={(e) => handleSystemPromptChange(e.target.value)}
-                placeholder="You are a professional email writing assistant that always uses a polite enthusiastic tone, emphasizes action items, and leaves blanks for the human to fill in when you have unknowns"
-              />
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-sm text-gray-500">
-                  {systemPrompt.length} characters
-                </div>
-                <Button
-                  onClick={handleSaveSystemPrompt}
-                  disabled={savingPrompt || systemPrompt === originalPrompt}
-                >
-                  {savingPrompt ? "Saving..." : "Save Instructions"}
-                </Button>
-              </div>
+          <SubLabel>
+            Add instructions to tailor the behavior of the assistant.
+          </SubLabel>
+          <div>
+            <textarea
+              className={cn(
+                "w-full",
+                "p-3",
+                "border",
+                "border-border",
+                "rounded-lg",
+                "text-sm",
+                "[&::placeholder]:text-text-muted/50"
+              )}
+              rows={8}
+              value={systemPrompt}
+              onChange={(e) => handleSystemPromptChange(e.target.value)}
+              placeholder="You are a professional email writing assistant that always uses a polite enthusiastic tone, emphasizes action items, and leaves blanks for the human to fill in when you have unknowns"
+            />
+            <div className="flex justify-between items-center mt-2">
+              <Text mainUiMuted text03 className="text-sm">
+                {systemPrompt.length} characters
+              </Text>
+              <Button
+                onClick={handleSaveSystemPrompt}
+                disabled={savingPrompt || systemPrompt === originalPrompt}
+              >
+                {savingPrompt ? "Saving..." : "Save Instructions"}
+              </Button>
             </div>
           </div>
+        </div>
 
-          <Separator />
+        <Separator />
 
-          <div>
-            <p className="block font-medium text-sm mb-2">Actions</p>
-            <div className="space-y-3">
-              {(availableTools || [])
-                .slice()
-                .sort((a, b) => {
-                  // Show enabled (available) tools first; not enabled at bottom
-                  if (a.is_available === b.is_available) return 0;
-                  return a.is_available ? -1 : 1;
-                })
-                .map((tool) => (
-                  <ToolToggle
-                    key={tool.id}
-                    tool={tool}
-                    enabled={enabledTools.has(tool.id)}
-                    onToggle={() => handleToggleTool(tool.id)}
-                    disabled={savingTools.has(tool.id)}
-                  />
-                ))}
-            </div>
+        <div>
+          <Text mainUiBody text04 className="font-medium text-sm mb-2">
+            Actions
+          </Text>
+          <div className="space-y-3">
+            {(availableTools || [])
+              .slice()
+              .sort((a, b) => {
+                // Show enabled (available) tools first; not enabled at bottom
+                if (a.is_available === b.is_available) return 0;
+                return a.is_available ? -1 : 1;
+              })
+              .map((tool) => (
+                <ToolToggle
+                  key={tool.id}
+                  tool={tool}
+                  enabled={enabledTools.has(tool.id)}
+                  onToggle={() => handleToggleTool(tool.id)}
+                  disabled={savingTools.has(tool.id)}
+                />
+              ))}
           </div>
         </div>
       </div>
@@ -280,16 +303,11 @@ function ToolToggle({
         <div className="text-sm font-medium flex items-center gap-2">
           <span>{tool.display_name}</span>
           {!tool.is_available && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs text-text-400 border border-border rounded px-1 py-0.5 cursor-help">
-                  Not enabled
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <Text inverted>{notEnabledReason}</Text>
-              </TooltipContent>
-            </Tooltip>
+            <SimpleTooltip tooltip={notEnabledReason}>
+              <span className="text-xs text-text-400 border border-border rounded px-1 py-0.5 cursor-help">
+                Not enabled
+              </span>
+            </SimpleTooltip>
           )}
         </div>
         <Text className="text-sm text-text-600 mt-1">{tool.description}</Text>
@@ -309,11 +327,11 @@ function ToolToggle({
 
 export default function Page() {
   return (
-    <div className="mx-auto max-w-4xl w-full">
+    <div className="w-full max-w-4xl mr-auto">
       <AdminPageTitle
         title="Default Assistant"
         icon={
-          <OnyxLogo className="my-auto w-[1.5rem] h-[1.5rem] stroke-text-04" />
+          <OnyxLogo width={32} height={32} className="my-auto stroke-text-04" />
         }
       />
       <DefaultAssistantConfig />

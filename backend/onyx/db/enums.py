@@ -173,3 +173,15 @@ class UserFileStatus(str, PyEnum):
     FAILED = "FAILED"
     CANCELED = "CANCELED"
     DELETING = "DELETING"
+
+
+class ThemePreference(str, PyEnum):
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
+
+
+class SwitchoverType(str, PyEnum):
+    REINDEX = "reindex"
+    ACTIVE_ONLY = "active_only"
+    INSTANT = "instant"

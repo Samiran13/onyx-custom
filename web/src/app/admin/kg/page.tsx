@@ -11,7 +11,7 @@ import {
 import { BrainIcon } from "@/components/icons/icons";
 import { Modal } from "@/components/Modal";
 import Button from "@/refresh-components/buttons/Button";
-import { SwitchField } from "@/components/ui/switch";
+import UnlabeledSwitchField from "@/refresh-components/formik-fields/UnlabeledSwitchField";
 import { Form, Formik, FormikState, useFormikContext } from "formik";
 import { useState } from "react";
 import * as Yup from "yup";
@@ -174,12 +174,10 @@ function KGConfiguration({
                 label="Enabled"
                 subtext="Enable or disable Knowledge Graph."
               />
-              <SwitchField
+              <UnlabeledSwitchField
                 name="enabled"
-                className="flex flex-1"
                 onCheckedChange={(state) => {
-                  props.resetForm();
-                  props.setFieldValue("enabled", state);
+                  if (!state) props.resetForm();
                 }}
               />
             </div>
@@ -207,7 +205,9 @@ function KGConfiguration({
                 disabled={!props.values.enabled}
               />
             </div>
-            <Button disabled={!props.dirty}>Submit</Button>
+            <Button type="submit" disabled={!props.dirty}>
+              Submit
+            </Button>
           </div>
         </Form>
       )}
@@ -249,7 +249,7 @@ function Main() {
   return (
     <div className="flex flex-col py-4 gap-y-8">
       {popup}
-      <CardSection className="max-w-2xl shadow-01 rounded-08 flex flex-col gap-spacing-interline">
+      <CardSection className="max-w-2xl shadow-01 rounded-08 flex flex-col gap-2">
         <Text headingH2>Knowledge Graph Configuration (Private Beta)</Text>
         <div className="flex flex-col gap-y-6">
           <div>
@@ -259,7 +259,7 @@ function Main() {
               organized as entities and their relationships, enabling powerful
               queries like:
             </Text>
-            <div className="p-spacing-paragraph">
+            <div className="p-4">
               <Text text03>
                 - &quot;Summarize my last 3 calls with account XYZ&quot;
               </Text>

@@ -7,6 +7,22 @@ import SimpleTooltip from "@/refresh-components/SimpleTooltip";
 import Link from "next/link";
 import Truncated from "@/refresh-components/texts/Truncated";
 
+const backgroundClasses = (active?: boolean) =>
+  ({
+    defaulted: [
+      active ? "bg-background-tint-00" : "bg-transparent",
+      "hover:bg-background-tint-03",
+    ],
+    lowlight: [
+      active ? "bg-background-tint-00" : "bg-transparent",
+      "hover:bg-background-tint-03",
+    ],
+    focused: [
+      "border-background-tint-04 border-[2px]",
+      "bg-background-neutral-00",
+    ],
+  }) as const;
+
 const textClasses = (active: boolean | undefined) =>
   ({
     defaulted: [
@@ -17,6 +33,7 @@ const textClasses = (active: boolean | undefined) =>
       active ? "text-text-03" : "text-text-02",
       "group-hover/SidebarTab:text-text-03",
     ],
+    focused: ["text-text-03"],
   }) as const;
 
 const iconClasses = (active: boolean | undefined) =>
@@ -29,12 +46,14 @@ const iconClasses = (active: boolean | undefined) =>
       active ? "stroke-text-03" : "stroke-text-02",
       "group-hover/SidebarTab:stroke-text-03",
     ],
+    focused: ["stroke-text-02"],
   }) as const;
 
 export interface SidebarTabProps {
   // Button states:
   folded?: boolean;
   active?: boolean;
+  focused?: boolean;
   lowlight?: boolean;
 
   // Button properties:
@@ -49,6 +68,7 @@ export interface SidebarTabProps {
 export default function SidebarTab({
   folded,
   active,
+  focused,
   lowlight,
 
   onClick,
@@ -58,23 +78,18 @@ export default function SidebarTab({
   rightChildren,
   children,
 }: SidebarTabProps) {
-  const variant = lowlight ? "lowlight" : "defaulted";
+  const variant = lowlight ? "lowlight" : focused ? "focused" : "defaulted";
 
   const innerContent = (
     <div
       className={cn(
-        "flex flex-row justify-center items-center p-spacing-interline-mini gap-spacing-inline rounded-08 cursor-pointer hover:bg-background-tint-03 group/SidebarTab w-full select-none",
-        active ? "bg-background-tint-00" : "bg-transparent",
+        "flex flex-row justify-start items-start p-1.5 gap-1 rounded-08 cursor-pointer group/SidebarTab w-full select-none",
+        backgroundClasses(active)[variant],
         className
       )}
       onClick={onClick}
     >
-      <div
-        className={cn(
-          "flex-1 h-[1.5rem] flex flex-row items-center px-spacing-inline py-spacing-inline-mini gap-spacing-interline",
-          folded ? "justify-center" : "justify-start"
-        )}
-      >
+      <div className="flex-1 h-[1.5rem] flex flex-row items-center px-1 py-0.5 gap-2 justify-start">
         {LeftIcon && (
           <div className="w-[1rem] h-[1rem] flex flex-col items-center justify-center">
             <LeftIcon
@@ -91,6 +106,7 @@ export default function SidebarTab({
             <Truncated
               className={cn(textClasses(active)[variant])}
               side="right"
+              sideOffset={40}
             >
               {children}
             </Truncated>

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import Button from "@/refresh-components/buttons/Button";
 import { PopupSpec } from "@/components/admin/connectors/Popup";
 import React, { useState, useEffect } from "react";
 import { useSWRConfig } from "swr";
@@ -338,8 +338,7 @@ export const GmailJsonUploadSection = ({
           {isAdmin && !existingAuthCredential && (
             <div className="mt-2">
               <Button
-                variant="destructive"
-                type="button"
+                danger
                 onClick={async () => {
                   const endpoint =
                     localServiceAccountData?.service_account_email
@@ -499,8 +498,7 @@ export const GmailAuthSection = ({
             </div>
           </div>
           <Button
-            variant="destructive"
-            type="button"
+            danger
             onClick={async () => {
               handleRevokeAccess(
                 connectorExists,
