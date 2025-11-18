@@ -145,6 +145,10 @@ services:
     build:
       context: ../../web
       dockerfile: Dockerfile
+      # NOTE: If build fails with "cannot allocate memory", either:
+      # 1. Increase Docker Desktop memory (Settings → Resources → Memory → 8GB+)
+      # 2. Reduce NODE_OPTIONS below (e.g., to 2048 or 3072)
+      # 3. Use BuildKit: DOCKER_BUILDKIT=1 docker compose build web_server
       args:
         - NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
         - NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
@@ -155,7 +159,8 @@ services:
         - NEXT_PUBLIC_THEME=${NEXT_PUBLIC_THEME:-}
         # DO NOT TURN ON unless you have EXPLICIT PERMISSION from Onyx.
         - NEXT_PUBLIC_DO_NOT_USE_TOGGLE_OFF_DANSWER_POWERED=${NEXT_PUBLIC_DO_NOT_USE_TOGGLE_OFF_DANSWER_POWERED:-false}
-        - NODE_OPTIONS=${NODE_OPTIONS:-"--max-old-space-size=4096"}
+        # Reduce to 2048 or 3072 if Docker has limited memory available
+        - NODE_OPTIONS=${NODE_OPTIONS:-"--max-old-space-size=3072"}
     env_file:
       - path: .env
         required: false
@@ -268,6 +273,9 @@ services:
         required: false
     environment:
       - VESPA_SKIP_UPGRADE_CHECK=${VESPA_SKIP_UPGRADE_CHECK:-true}
+      # Allow Vespa to run with less than 4GB memory (useful for development)
+      # For production, ensure at least 4GB is available or set this to false
+      - VESPA_IGNORE_NOT_ENOUGH_MEMORY=${VESPA_IGNORE_NOT_ENOUGH_MEMORY:-true}
     # DEV: To expose ports, either:
     # 1. Use docker-compose.dev.yml: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
     # 2. Uncomment the ports below
@@ -300,7 +308,7 @@ services:
       - NGINX_PROXY_SEND_TIMEOUT=${NGINX_PROXY_SEND_TIMEOUT:-300}
       - NGINX_PROXY_READ_TIMEOUT=${NGINX_PROXY_READ_TIMEOUT:-300}
     ports:
-      - "80:80"
+      - "8080:80"
       - "${HOST_PORT:-3000}:80" # allow for localhost:3000 usage, since that is the norm
     volumes:
       - ../data/nginx:/etc/nginx/conf.d
