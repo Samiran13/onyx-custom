@@ -127,8 +127,7 @@ services:
     # Optional, only for debugging purposes
     volumes:
       - background_logs:/var/log/onyx
-      # EC2: Update this path to a directory on your EC2 instance, or remove if not needed
-      # - /path/to/onyx_files:/app/local_files:rw
+      # - /home/cdot/Downloads/onyx_files:/app/local_files:rw
     logging:
       driver: json-file
       options:

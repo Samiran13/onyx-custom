@@ -78,6 +78,7 @@ from onyx.key_value_store.factory import get_shared_kv_store
 from onyx.kg.utils.formatting_utils import split_relationship_id
 from onyx.utils.batching import batch_generator
 from onyx.utils.logger import setup_logger
+from onyx.configs.app_configs import MANAGED_VESPA
 from shared_configs.configs import MULTI_TENANT
 from shared_configs.model_server_models import Embedding
 
@@ -228,8 +229,35 @@ class VespaIndex(DocumentIndex):
         secondary_index_embedding_precision: EmbeddingPrecision | None,
     ) -> None:
         if MULTI_TENANT:
+            # For Managed Vespa, schemas are managed manually through the Vespa Console
+            if MANAGED_VESPA:
+                logger.info(
+                    "Skipping Vespa index setup for managed Vespa (schemas managed manually)"
+                )
+                return None
+            
+            # In multi-tenant mode (non-managed), register the specific indices that need to be created
+            # This allows new embedding models (not in SUPPORTED_EMBEDDING_MODELS) to work
+            indices_to_register = [self.index_name]
+            embedding_dims = [primary_embedding_dim]
+            embedding_precisions = [primary_embedding_precision]
+            
+            if self.secondary_index_name:
+                if secondary_index_embedding_dim is None:
+                    raise ValueError("Secondary index embedding dimension is required")
+                if secondary_index_embedding_precision is None:
+                    raise ValueError("Secondary index embedding precision is required")
+                indices_to_register.append(self.secondary_index_name)
+                embedding_dims.append(secondary_index_embedding_dim)
+                embedding_precisions.append(secondary_index_embedding_precision)
+            
             logger.info(
-                "Skipping Vespa index setup for multitenant (would wipe all indices)"
+                f"Registering Vespa indices for multi-tenant: {indices_to_register}"
+            )
+            VespaIndex.register_multitenant_indices(
+                indices=indices_to_register,
+                embedding_dims=embedding_dims,
+                embedding_precisions=embedding_precisions,
             )
             return None
 
