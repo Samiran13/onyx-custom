@@ -277,6 +277,8 @@ def read_pdf_file(
     metadata: dict[str, Any] = {}
     extracted_images: list[tuple[bytes, str]] = []
     try:
+        # Ensure file pointer is at the beginning before reading
+        file.seek(0)
         pdf_reader = PdfReader(file)
 
         if pdf_reader.is_encrypted and pdf_pass is not None:
@@ -308,20 +310,91 @@ def read_pdf_file(
         )
 
         if extract_images:
+            logger.info(f"PDF image extraction enabled. Processing {len(pdf_reader.pages)} pages for images.")
+            total_images_found = 0
             for page_num, page in enumerate(pdf_reader.pages):
+                page_images = list(page.images)
+                if page_images:
+                    logger.info(f"Found {len(page_images)} image(s) on page {page_num + 1}")
+                    total_images_found += len(page_images)
                 for image_file_object in page.images:
-                    image = Image.open(io.BytesIO(image_file_object.data))
-                    img_byte_arr = io.BytesIO()
-                    image.save(img_byte_arr, format=image.format)
-                    img_bytes = img_byte_arr.getvalue()
-
-                    image_format = image.format.lower() if image.format else "png"
-                    image_name = f"page_{page_num + 1}_image_{image_file_object.name}.{image_format}"
-                    if image_callback is not None:
-                        # Stream image out immediately
-                        image_callback(img_bytes, image_name)
-                    else:
-                        extracted_images.append((img_bytes, image_name))
+                    try:
+                        image = Image.open(io.BytesIO(image_file_object.data))
+                        original_mode = image.mode
+                        original_format = image.format
+                        
+                        # Determine save format - default to PNG for reliability
+                        save_format = "PNG"
+                        if original_format and original_format.upper() in ("PNG", "JPEG", "JPG"):
+                            save_format = original_format.upper()
+                            if save_format == "JPG":
+                                save_format = "JPEG"
+                        
+                        # Convert image to appropriate mode for saving
+                        # Handle different color modes that PDFs might contain
+                        if image.mode == "CMYK":
+                            # CMYK images need to be converted to RGB
+                            image = image.convert("RGB")
+                        elif image.mode == "P":
+                            # Palette mode - check if it has transparency
+                            if "transparency" in image.info:
+                                image = image.convert("RGBA")
+                            else:
+                                image = image.convert("RGB")
+                        elif image.mode in ("RGBA", "LA"):
+                            # Images with alpha channel - we'll handle based on save format
+                            pass  # Keep as is for now, will convert if saving as JPEG
+                        elif image.mode not in ("RGB", "L"):
+                            # Other modes (LAB, HSV, etc.) - convert to RGB
+                            image = image.convert("RGB")
+                        
+                        # If saving as JPEG, ensure RGB mode (no transparency)
+                        if save_format == "JPEG":
+                            if image.mode in ("RGBA", "LA"):
+                                # Create white background and paste image
+                                background = Image.new("RGB", image.size, (255, 255, 255))
+                                if image.mode == "RGBA":
+                                    background.paste(image, mask=image.split()[-1])
+                                elif image.mode == "LA":
+                                    background.paste(image, mask=image.split()[-1])
+                                image = background
+                            elif image.mode == "L":
+                                # Grayscale - convert to RGB
+                                image = image.convert("RGB")
+                        
+                        # Save the image
+                        img_byte_arr = io.BytesIO()
+                        if save_format == "JPEG":
+                            image.save(img_byte_arr, format="JPEG", quality=95)
+                        else:
+                            image.save(img_byte_arr, format="PNG")
+                        
+                        img_bytes = img_byte_arr.getvalue()
+                        image_format = save_format.lower()
+                        image_name = f"page_{page_num + 1}_image_{image_file_object.name}.{image_format}"
+                        
+                        logger.info(
+                            f"Extracted image from PDF: {image_name}, "
+                            f"size: {len(img_bytes)} bytes, format: {save_format}, "
+                            f"original_mode: {original_mode}, original_format: {original_format}"
+                        )
+                        
+                        if image_callback is not None:
+                            # Stream image out immediately
+                            image_callback(img_bytes, image_name)
+                        else:
+                            extracted_images.append((img_bytes, image_name))
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to extract image from PDF page {page_num + 1}, "
+                            f"image {image_file_object.name}: {e}"
+                        )
+                        continue
+            
+            if total_images_found == 0:
+                logger.info("No images found in PDF pages")
+            else:
+                logger.info(f"PDF image extraction completed. Found {total_images_found} total image(s), successfully extracted {len(extracted_images)}")
 
         return text, metadata, extracted_images
 
@@ -647,9 +720,12 @@ def _extract_text_and_images(
 ) -> ExtractionResult:
     file.seek(0)
 
-    if get_unstructured_api_key():
+    unstructured_key = get_unstructured_api_key()
+    if unstructured_key:
+        logger.info(f"Unstructured API key found. Processing {file_name} with Unstructured (image extraction will be skipped).")
         try:
             text_content = unstructured_to_text(file, file_name)
+            logger.info(f"Unstructured processing completed for {file_name}. Returning text only (no images).")
             return ExtractionResult(
                 text_content=text_content, embedded_images=[], metadata={}
             )
@@ -658,17 +734,22 @@ def _extract_text_and_images(
                 f"Failed to process with Unstructured: {str(e)}. Falling back to normal processing."
             )
             file.seek(0)  # Reset file pointer just in case
-
-    # When we upload a document via a connector or MyDocuments, we extract and store the content of files
-    # with content types in UploadMimeTypes.DOCUMENT_MIME_TYPES as plain text files.
-    # As a result, the file name extension may differ from the original content type.
-    # We process files with a plain text content type first to handle this scenario.
-    if content_type == TEXT_MIME_TYPE:
-        return extract_result_from_text_file(file)
+    else:
+        logger.info(f"No Unstructured API key found. Using standard extraction for {file_name}.")
 
     # Default processing
     try:
         extension = get_file_ext(file_name)
+        logger.debug(f"Processing file {file_name} with extension {extension}, content_type={content_type}")
+        
+        # When we upload a document via a connector or MyDocuments, we extract and store the content of files
+        # with content types in UploadMimeTypes.DOCUMENT_MIME_TYPES as plain text files.
+        # As a result, the file name extension may differ from the original content type.
+        # However, we should prioritize the file extension over the stored content_type for determining
+        # how to process the file. Only use text/plain extraction if the extension is also a text extension.
+        if content_type == TEXT_MIME_TYPE and extension in ACCEPTED_PLAIN_TEXT_FILE_EXTENSIONS:
+            logger.info(f"Content type is {TEXT_MIME_TYPE} and extension {extension} is a text extension, using text file extraction for {file_name}")
+            return extract_result_from_text_file(file)
         # docx example for embedded images
         if extension == ".docx":
             text_content, images = docx_to_text_and_images(
@@ -681,12 +762,16 @@ def _extract_text_and_images(
         # PDF example: we do not show complicated PDF image extraction here
         # so we simply extract text for now and skip images.
         if extension == ".pdf":
+            extract_images_enabled = get_image_extraction_and_analysis_enabled()
+            logger.info(f"Processing PDF: extract_images={extract_images_enabled}")
+            file.seek(0)  # Ensure file pointer is at the beginning
             text_content, pdf_metadata, images = read_pdf_file(
                 file,
                 pdf_pass,
-                extract_images=get_image_extraction_and_analysis_enabled(),
+                extract_images=extract_images_enabled,
                 image_callback=image_callback,
             )
+            logger.info(f"PDF extraction completed: text_length={len(text_content)}, images_extracted={len(images)}")
             return ExtractionResult(
                 text_content=text_content, embedded_images=images, metadata=pdf_metadata
             )

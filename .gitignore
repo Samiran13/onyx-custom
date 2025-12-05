@@ -48,3 +48,5 @@ CLAUDE.md
 
 # MCP configs
 .playwright-mcp
+backend/scripts/ingest_folder_example.py
+backend/scripts/query_image_summaries.py

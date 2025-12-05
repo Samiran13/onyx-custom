@@ -503,8 +503,9 @@ def upload_files(
             assert file.filename is not None
 
             # Special handling for doc files - only store the plaintext version
+            # EXCEPT for PDFs - we need to store PDFs as binary to extract images
             file_type = mime_type_to_chat_file_type(file.content_type)
-            if file_type == ChatFileType.DOC:
+            if file_type == ChatFileType.DOC and file.content_type != "application/pdf":
                 extracted_text = extract_file_text(file.file, file.filename or "")
                 text_file_id = file_store.save_file(
                     content=io.BytesIO(extracted_text.encode()),

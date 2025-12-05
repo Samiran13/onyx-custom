@@ -22,6 +22,7 @@ from onyx.file_processing.extract_file_text import is_accepted_file_ext
 from onyx.file_processing.extract_file_text import OnyxExtensionType
 from onyx.file_processing.image_utils import store_image_and_create_section
 from onyx.file_store.file_store import get_default_file_store
+from onyx.utils.b64 import get_image_type_from_bytes
 from onyx.utils.logger import setup_logger
 
 
@@ -197,17 +198,28 @@ def _process_file(
         # Store each embedded image as a separate file in FileStore
         # and create a section with the image reference
         try:
+            # Detect the actual image MIME type from the image bytes
+            try:
+                detected_media_type = get_image_type_from_bytes(img_data)
+            except ValueError:
+                # Fallback to default if image type cannot be detected
+                logger.warning(
+                    f"Could not detect image type for embedded image {idx} in {file_name}, using default"
+                )
+                detected_media_type = "application/octet-stream"
+            
             image_section, stored_file_name = _create_image_section(
                 image_data=img_data,
                 parent_file_name=file_id,
                 display_name=f"{title} - image {idx}",
-                media_type="application/octet-stream",  # Default media type for embedded images
+                media_type=detected_media_type,
                 idx=idx,
             )
             sections.append(image_section)
-            logger.debug(
+            logger.info(
                 f"Created ImageSection for embedded image {idx} "
-                f"in {file_name}, stored as: {stored_file_name}"
+                f"in {file_name}, stored as: {stored_file_name}, "
+                f"media_type: {detected_media_type}"
             )
         except Exception as e:
             logger.warning(

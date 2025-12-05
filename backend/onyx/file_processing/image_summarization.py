@@ -49,6 +49,7 @@ def summarize_image_pipeline(
         query,
         system_prompt,
     )
+    logger.info("Image summary: %s", summary)
 
     return summary
 
