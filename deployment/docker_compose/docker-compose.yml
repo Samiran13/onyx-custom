@@ -278,7 +278,7 @@ services:
       - VESPA_SKIP_UPGRADE_CHECK=${VESPA_SKIP_UPGRADE_CHECK:-true}
       # Allow Vespa to run with less than 4GB memory (useful for development)
       # For production, ensure at least 4GB is available or set this to false
-      - VESPA_IGNORE_NOT_ENOUGH_MEMORY=${VESPA_IGNORE_NOT_ENOUGH_MEMORY:-true}
+      # - VESPA_IGNORE_NOT_ENOUGH_MEMORY=${VESPA_IGNORE_NOT_ENOUGH_MEMORY:-true}
     # DEV: To expose ports, either:
     # 1. Use docker-compose.dev.yml: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
     # 2. Uncomment the ports below
